@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #161B23;
+  --color-inkhover: #1E293B;
+  --color-canvas: #EFF2F8;
+  --color-surface: #FFFFFF;
+  --color-border: #E7EAF3;
+  --color-hairline: #F1F3F9;
+  --color-signal: #2563EB;
+  --color-signal-light: #EAF1FF;
+  --color-signal-dark: #1D4ED8;
+  --color-success: #16A34A;
+  --color-success-light: #DCFCE7;
+  --color-warning: #D97706;
+  --color-warning-light: #FEF3C7;
+  --color-danger: #DC2626;
+  --color-danger-light: #FEE2E2;
+  --color-secondary: #8B93A7;
+  --color-tertiary: #A5ABB9;
+
+  /* Remap the default gray scale used by secondary/tertiary text */
+  --color-gray-400: #A5ABB9;
+  --color-gray-500: #8B93A7;
+  --color-gray-600: #6B7386;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --radius: 12px;
+  --radius-2xl: 16px;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-canvas text-ink font-sans antialiased;
+}
+
+/* Visible keyboard focus everywhere, per accessibility baseline */
+:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
