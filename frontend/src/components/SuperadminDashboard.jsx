@@ -131,7 +131,7 @@ export default function SuperAdminDashboard() {
       <DashboardSidebar
         navItems={NAV.map((n) => ({ ...n, active: activeNav === n.label }))}
         userName="Super Admin"
-        userRole="Network-wide access"
+        userRole="Super Admin"
         initials="SA"
         gradient="linear-gradient(135deg,#2563EB,#818CF8)"
         onSelect={setActiveNav}

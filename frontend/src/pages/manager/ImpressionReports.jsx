@@ -6,13 +6,11 @@ import Card from '../../components/ui/Card';
 import StatCard from '../../components/ui/StatCard';
 import Table from '../../components/ui/Table';
 import BarChart from '../../components/ui/BarChart';
-import SearchBar from '../../components/ui/SearchBar';
 import Alert from '../../components/ui/Alert';
 import Loading from '../../components/ui/Loading';
 
 export default function ImpressionReports() {
   const [impressions, setImpressions] = useState([]);
-  const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -65,19 +63,6 @@ export default function ImpressionReports() {
     return [...map.values()];
   }, [impressions]);
 
-  const q = query.trim().toLowerCase();
-  const visibleBoards = useMemo(
-    () => byBoard.filter((b) => !q || b.board.toLowerCase().includes(q) || (b.location || '').toLowerCase().includes(q)),
-    [byBoard, q]
-  );
-  const visibleReadings = useMemo(
-    () =>
-      impressions
-        .filter((i) => !q || (i.board?.name || '').toLowerCase().includes(q))
-        .slice(0, 20),
-    [impressions, q]
-  );
-
   const boardColumns = [
     { key: 'board', label: 'Board' },
     { key: 'location', label: 'Location' },
@@ -87,7 +72,7 @@ export default function ImpressionReports() {
   ];
 
   const readingColumns = [
-    { key: 'time', label: 'Time', render: (r) => new Date(r.recorded_at).toLocaleString() },
+    { key: 'time', label: 'Time', render: (r) => new Date(r.recorded_at).toLocaleString(), sortValue: (r) => r.recorded_at },
     { key: 'board', label: 'Board', render: (r) => r.board?.name || '—' },
     { key: 'people', label: 'People', render: (r) => r.people_count },
     { key: 'vehicles', label: 'Vehicles', render: (r) => r.vehicle_count },
@@ -123,21 +108,14 @@ export default function ImpressionReports() {
           </Card>
 
           <Card title="Per board">
-            <div className="mb-4 flex w-full sm:w-72">
-              <SearchBar
-                value={query}
-                onChange={setQuery}
-                placeholder="Search boards..."
-              />
-            </div>
-            <Table columns={boardColumns} rows={visibleBoards} emptyMessage={q ? 'No boards match your search.' : 'No data'} />
+            <Table columns={boardColumns} rows={byBoard} emptyMessage="No data" />
           </Card>
 
-          <Card title="Recent readings">
+          <Card title="Impression readings">
             <Table
               columns={readingColumns}
-              rows={visibleReadings}
-              emptyMessage={q ? 'No readings match your search.' : 'No readings yet.'}
+              rows={impressions}
+              emptyMessage="No readings yet."
             />
           </Card>
         </div>

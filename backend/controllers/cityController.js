@@ -5,12 +5,13 @@ const User = require('../models/User');
 exports.createCity = async (req, res) => {
   try {
     const { name, cityManager, status } = req.body;
+    const cityName = typeof name === 'string' ? name.trim() : '';
 
-    if (!name) {
+    if (!cityName) {
       return res.status(400).json({ message: 'City name is required' });
     }
 
-    const exists = await City.findOne({ name });
+    const exists = await City.findOne({ name: cityName }).collation({ locale: 'en', strength: 2 });
     if (exists) {
       return res.status(400).json({ message: 'City already exists' });
     }
@@ -18,14 +19,17 @@ exports.createCity = async (req, res) => {
     // If a city manager is assigned, verify that user exists and has the right role
     if (cityManager) {
       const manager = await User.findById(cityManager);
-      if (!manager || manager.role !== 'citymanager') {
+      if (!manager || manager.role !== 'citymanager' || manager.isApproved === false || manager.isActive === false) {
         return res.status(400).json({ message: 'Invalid city manager' });
       }
     }
 
-    const city = await City.create({ name, cityManager, status });
+    const city = await City.create({ name: cityName, cityManager, status });
     res.status(201).json(city);
   } catch (err) {
+    if (err.code === 11000) {
+      return res.status(400).json({ message: 'City already exists' });
+    }
     res.status(500).json({ message: err.message });
   }
 };
@@ -64,10 +68,15 @@ exports.getCityById = async (req, res) => {
 exports.updateCity = async (req, res) => {
   try {
     const { name, cityManager, status } = req.body;
+    const cityName = typeof name === 'string' ? name.trim() : name;
+
+    if (name !== undefined && (typeof name !== 'string' || !cityName)) {
+      return res.status(400).json({ message: 'City name is required' });
+    }
 
     if (cityManager) {
       const manager = await User.findById(cityManager);
-      if (!manager || manager.role !== 'citymanager') {
+      if (!manager || manager.role !== 'citymanager' || manager.isApproved === false || manager.isActive === false) {
         return res.status(400).json({ message: 'Invalid city manager' });
       }
     }
@@ -77,9 +86,19 @@ exports.updateCity = async (req, res) => {
 
     const previousManagerId = existingCity.cityManager ? existingCity.cityManager.toString() : null;
 
+    if (cityName !== undefined) {
+      const duplicate = await City.findOne({
+        name: cityName,
+        _id: { $ne: existingCity._id },
+      }).collation({ locale: 'en', strength: 2 });
+      if (duplicate) {
+        return res.status(400).json({ message: 'City already exists' });
+      }
+    }
+
     const city = await City.findByIdAndUpdate(
       req.params.id,
-      { name, cityManager, status },
+      { name: cityName, cityManager, status },
       { new: true, runValidators: true }
     );
 
@@ -97,6 +116,9 @@ exports.updateCity = async (req, res) => {
 
     res.json(city);
   } catch (err) {
+    if (err.code === 11000) {
+      return res.status(400).json({ message: 'City already exists' });
+    }
     res.status(500).json({ message: err.message });
   }
 };

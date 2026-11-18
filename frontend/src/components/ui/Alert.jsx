@@ -7,6 +7,7 @@ export default function Alert({ type = 'error', children }) {
   const s = styles[type] || styles.error;
   return (
     <div
+      role="alert"
       className="mb-4 rounded-xl border px-4 py-3 text-[13px] font-medium"
       style={{ background: s.bg, borderColor: s.bg, color: s.fg }}
     >

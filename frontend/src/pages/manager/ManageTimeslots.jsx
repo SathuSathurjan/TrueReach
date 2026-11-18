@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../services/api';
 import PageHeader from '../../components/ui/PageHeader';
@@ -7,7 +7,6 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Table from '../../components/ui/Table';
 import Badge from '../../components/ui/Badge';
-import SearchBar from '../../components/ui/SearchBar';
 import Alert from '../../components/ui/Alert';
 import Loading from '../../components/ui/Loading';
 
@@ -16,7 +15,6 @@ export default function ManageTimeslots() {
   const [board, setBoard] = useState(null);
   const [slots, setSlots] = useState([]);
   const [form, setForm] = useState({ startTime: '', endTime: '' });
-  const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -67,27 +65,18 @@ export default function ManageTimeslots() {
     }
   };
 
-  const visibleSlots = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return slots;
-    return slots.filter(
-      (s) =>
-        new Date(s.startTime).toLocaleString().toLowerCase().includes(q) ||
-        new Date(s.endTime).toLocaleString().toLowerCase().includes(q) ||
-        (s.status || '').toLowerCase().includes(q)
-    );
-  }, [slots, query]);
-
   const columns = [
     {
       key: 'start',
       label: 'Start',
       render: (row) => new Date(row.startTime).toLocaleString(),
+      sortValue: (row) => row.startTime,
     },
     {
       key: 'end',
       label: 'End',
       render: (row) => new Date(row.endTime).toLocaleString(),
+      sortValue: (row) => row.endTime,
     },
     {
       key: 'status',
@@ -149,20 +138,7 @@ export default function ManageTimeslots() {
       {loading ? (
         <Loading label="Loading timeslots..." />
       ) : (
-        <>
-          <div className="mb-4 flex w-full sm:w-72">
-            <SearchBar
-              value={query}
-              onChange={setQuery}
-              placeholder="Search by date or status..."
-            />
-          </div>
-          <Table
-            columns={columns}
-            rows={visibleSlots}
-            emptyMessage={query ? 'No timeslots match your search.' : 'No timeslots for this board yet.'}
-          />
-        </>
+        <Table columns={columns} rows={slots} emptyMessage="No timeslots for this board yet." />
       )}
     </div>
   );

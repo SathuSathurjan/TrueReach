@@ -6,13 +6,11 @@ import Card from '../../components/ui/Card';
 import StatCard from '../../components/ui/StatCard';
 import Table from '../../components/ui/Table';
 import BarChart from '../../components/ui/BarChart';
-import SearchBar from '../../components/ui/SearchBar';
 import Alert from '../../components/ui/Alert';
 import Loading from '../../components/ui/Loading';
 
 export default function ImpressionAnalytics() {
   const [impressions, setImpressions] = useState([]);
-  const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -70,16 +68,6 @@ export default function ImpressionAnalytics() {
     return [...map.values()];
   }, [impressions]);
 
-  const q = query.trim().toLowerCase();
-  const visibleCities = useMemo(
-    () => byCity.filter((c) => !q || c.city.toLowerCase().includes(q)),
-    [byCity, q]
-  );
-  const visibleBoards = useMemo(
-    () => byBoard.filter((b) => !q || b.board.toLowerCase().includes(q)),
-    [byBoard, q]
-  );
-
   const cityColumns = [
     { key: 'city', label: 'City' },
     { key: 'readings', label: 'Readings', render: (r) => r.readings.toLocaleString() },
@@ -125,24 +113,10 @@ export default function ImpressionAnalytics() {
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <Card title="Per city">
-              <div className="mb-4 flex w-full">
-                <SearchBar
-                  value={query}
-                  onChange={setQuery}
-                  placeholder="Search city or board..."
-                />
-              </div>
-              <Table columns={cityColumns} rows={visibleCities} emptyMessage={q ? 'No cities match your search.' : 'No data'} />
+              <Table columns={cityColumns} rows={byCity} emptyMessage="No data" />
             </Card>
             <Card title="Per board">
-              <div className="mb-4 flex w-full">
-                <SearchBar
-                  value={query}
-                  onChange={setQuery}
-                  placeholder="Search city or board..."
-                />
-              </div>
-              <Table columns={boardColumns} rows={visibleBoards} emptyMessage={q ? 'No boards match your search.' : 'No data'} />
+              <Table columns={boardColumns} rows={byBoard} emptyMessage="No data" />
             </Card>
           </div>
         </div>

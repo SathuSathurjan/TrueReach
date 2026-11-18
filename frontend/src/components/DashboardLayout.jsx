@@ -9,7 +9,7 @@ const roleGradient = {
 };
 
 const roleLabel = {
-  superadmin: 'Network-wide access',
+  superadmin: 'Super Admin',
   citymanager: 'City Manager',
   advertiser: 'Advertiser',
 };

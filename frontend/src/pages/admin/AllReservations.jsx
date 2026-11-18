@@ -4,7 +4,6 @@ import PageHeader from '../../components/ui/PageHeader';
 import Select from '../../components/ui/Select';
 import Table from '../../components/ui/Table';
 import Badge from '../../components/ui/Badge';
-import SearchBar from '../../components/ui/SearchBar';
 import Alert from '../../components/ui/Alert';
 import Loading from '../../components/ui/Loading';
 
@@ -13,7 +12,6 @@ export default function AllReservations() {
   const [cities, setCities] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
-  const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -34,21 +32,12 @@ export default function AllReservations() {
   }, []);
 
   const visible = useMemo(() => {
-    const filtered = reservations.filter(
+    return reservations.filter(
       (r) =>
         (statusFilter ? r.status === statusFilter : true) &&
         (cityFilter ? r.board?.city?.name === cityFilter : true)
     );
-    const q = query.trim().toLowerCase();
-    if (!q) return filtered;
-    return filtered.filter(
-      (r) =>
-        (r.advertiser?.name || '').toLowerCase().includes(q) ||
-        (r.advertiser?.email || '').toLowerCase().includes(q) ||
-        (r.board?.name || '').toLowerCase().includes(q) ||
-        (r.board?.city?.name || '').toLowerCase().includes(q)
-    );
-  }, [reservations, statusFilter, cityFilter, query]);
+  }, [reservations, statusFilter, cityFilter]);
 
   const countByStatus = useMemo(() => {
     const map = { pending: 0, approved: 0, rejected: 0 };
@@ -93,6 +82,7 @@ export default function AllReservations() {
           </p>
         </div>
       ),
+      sortValue: (row) => row.timeslot?.startTime,
     },
     {
       key: 'creative',
@@ -156,19 +146,12 @@ export default function AllReservations() {
                 onChange={(e) => setCityFilter(e.target.value)}
               />
             </div>
-            <div className="w-full sm:w-72 sm:ml-auto">
-              <SearchBar
-                value={query}
-                onChange={setQuery}
-                placeholder="Search advertiser, board, or city..."
-              />
-            </div>
           </div>
 
           <Table
             columns={columns}
             rows={visible}
-            emptyMessage={query ? 'No reservations match your search.' : 'No reservations match the selected filters.'}
+            emptyMessage="No reservations match the selected filters."
           />
         </>
       )}

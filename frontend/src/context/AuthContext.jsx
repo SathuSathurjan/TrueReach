@@ -28,9 +28,11 @@ export function AuthProvider({ children }) {
   const register = async (payload) => {
     const res = await api.post('/auth/register', payload);
     const { token, ...userData } = res.data;
-    localStorage.setItem('truereach_token', token);
-    localStorage.setItem('truereach_user', JSON.stringify(userData));
-    setUser(userData);
+    if (token) {
+      localStorage.setItem('truereach_token', token);
+      localStorage.setItem('truereach_user', JSON.stringify(userData));
+      setUser(userData);
+    }
     return userData;
   };
 

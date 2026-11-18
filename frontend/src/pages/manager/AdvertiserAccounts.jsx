@@ -2,13 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import PageHeader from '../../components/ui/PageHeader';
 import Table from '../../components/ui/Table';
-import SearchBar from '../../components/ui/SearchBar';
 import Alert from '../../components/ui/Alert';
 import Loading from '../../components/ui/Loading';
 
 export default function AdvertiserAccounts() {
   const [reservations, setReservations] = useState([]);
-  const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -41,14 +39,6 @@ export default function AdvertiserAccounts() {
     return [...map.values()].sort((a, b) => b.bookings - a.bookings);
   }, [reservations]);
 
-  const visibleAdvertisers = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return advertisers;
-    return advertisers.filter(
-      (a) => a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q)
-    );
-  }, [advertisers, query]);
-
   const columns = [
     { key: 'name', label: 'Advertiser' },
     { key: 'email', label: 'Email' },
@@ -69,20 +59,7 @@ export default function AdvertiserAccounts() {
       {loading ? (
         <Loading label="Loading advertisers..." />
       ) : (
-        <>
-          <div className="mb-4 flex w-full sm:w-72">
-            <SearchBar
-              value={query}
-              onChange={setQuery}
-              placeholder="Search advertisers by name or email..."
-            />
-          </div>
-          <Table
-            columns={columns}
-            rows={visibleAdvertisers}
-            emptyMessage={query ? 'No advertisers match your search.' : 'No advertisers have booked boards in your city yet.'}
-          />
-        </>
+        <Table columns={columns} rows={advertisers} emptyMessage="No advertisers have booked boards in your city yet." />
       )}
     </div>
   );

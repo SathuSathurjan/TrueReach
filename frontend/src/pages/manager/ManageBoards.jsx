@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -8,7 +8,6 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Table from '../../components/ui/Table';
 import Badge from '../../components/ui/Badge';
-import SearchBar from '../../components/ui/SearchBar';
 import Alert from '../../components/ui/Alert';
 import Loading from '../../components/ui/Loading';
 
@@ -16,7 +15,6 @@ export default function ManageBoards() {
   const { user } = useAuth();
   const [boards, setBoards] = useState([]);
   const [form, setForm] = useState({ name: '', location: '' });
-  const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -62,14 +60,6 @@ export default function ManageBoards() {
       setError(err.response?.data?.message || 'Failed to update board');
     }
   };
-
-  const visibleBoards = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return boards;
-    return boards.filter(
-      (b) => b.name.toLowerCase().includes(q) || (b.location || '').toLowerCase().includes(q)
-    );
-  }, [boards, query]);
 
   const columns = [
     { key: 'name', label: 'Board' },
@@ -133,20 +123,7 @@ export default function ManageBoards() {
       {loading ? (
         <Loading label="Loading boards..." />
       ) : (
-        <>
-          <div className="mb-4 flex w-full sm:w-72">
-            <SearchBar
-              value={query}
-              onChange={setQuery}
-              placeholder="Search boards by name or location..."
-            />
-          </div>
-          <Table
-            columns={columns}
-            rows={visibleBoards}
-            emptyMessage={query ? 'No boards match your search.' : 'No boards in your city yet.'}
-          />
-        </>
+        <Table columns={columns} rows={boards} emptyMessage="No boards in your city yet." />
       )}
     </div>
   );

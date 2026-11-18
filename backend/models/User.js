@@ -23,6 +23,14 @@ const userSchema = new mongoose.Schema({
     enum: ['superadmin', 'citymanager', 'advertiser'],
     required: true,
   },
+  isApproved: {
+    type: Boolean,
+    default: true,
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
   city: {
     // Only relevant for citymanager role — which city they manage
     type: mongoose.Schema.Types.ObjectId,

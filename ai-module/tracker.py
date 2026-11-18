@@ -13,6 +13,7 @@ Usage:
 Press 'q' in the video window to stop.
 """
 
+import os
 import time
 import cv2
 
@@ -31,7 +32,11 @@ def main():
     detector = AudienceDetector(confidence_threshold=settings.CONFIDENCE_THRESHOLD)
     cap = open_video_source(settings)
 
-    print(f"\nTracker running (source: {settings.SOURCE_TYPE}). Press 'q' in the video window to stop.\n")
+    show_window = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+    if show_window:
+        print(f"\nTracker running (source: {settings.SOURCE_TYPE}). Press 'q' in the video window to stop.\n")
+    else:
+        print(f"\nTracker running in headless mode (source: {settings.SOURCE_TYPE}). Display not available; skipping visual window.\n")
 
     window_people_readings = []
     window_vehicle_readings = []
@@ -49,16 +54,17 @@ def main():
             window_people_readings.append(people_count)
             window_vehicle_readings.append(vehicle_count)
 
-            cv2.putText(
-                annotated,
-                f"People: {people_count}  Vehicles: {vehicle_count}",
-                (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                (0, 255, 0),
-                2,
-            )
-            cv2.imshow("TrueReach Audience Tracker", annotated)
+            if show_window:
+                cv2.putText(
+                    annotated,
+                    f"People: {people_count}  Vehicles: {vehicle_count}",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    (0, 255, 0),
+                    2,
+                )
+                cv2.imshow("TrueReach Audience Tracker", annotated)
 
             if time.time() - last_report_time >= settings.REPORT_INTERVAL_SECONDS:
                 avg_people = round(sum(window_people_readings) / len(window_people_readings))
@@ -70,12 +76,15 @@ def main():
                 window_vehicle_readings = []
                 last_report_time = time.time()
 
-            if cv2.waitKey(1) & 0xFF == ord("q"):
+            if show_window and cv2.waitKey(1) & 0xFF == ord("q"):
                 print("Stopped by user.")
                 break
+            elif not show_window:
+                time.sleep(0.01)
     finally:
         cap.release()
-        cv2.destroyAllWindows()
+        if show_window:
+            cv2.destroyAllWindows()
         print("Tracker stopped.")
 
 

@@ -2,17 +2,17 @@ import { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import PageHeader from '../../components/ui/PageHeader';
 import Button from '../../components/ui/Button';
+import Badge from '../../components/ui/Badge';
 import Table from '../../components/ui/Table';
-import SearchBar from '../../components/ui/SearchBar';
 import Alert from '../../components/ui/Alert';
 import Loading from '../../components/ui/Loading';
 
 export default function ManageAdvertisers() {
   const [advertisers, setAdvertisers] = useState([]);
   const [reservations, setReservations] = useState([]);
-  const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [updatingAdvertiserId, setUpdatingAdvertiserId] = useState(null);
 
   const loadData = async () => {
     try {
@@ -56,21 +56,37 @@ export default function ManageAdvertisers() {
     }
   };
 
-  const visibleAdvertisers = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return advertisers;
-    return advertisers.filter(
-      (a) => a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q)
-    );
-  }, [advertisers, query]);
+  const handleStatusToggle = async (advertiser) => {
+    const isActive = advertiser.isActive === false;
+    if (!isActive && !window.confirm(
+      `Deactivate ${advertiser.name}? They will be unable to sign in until reactivated. Existing reservations will be kept.`
+    )) return;
+
+    setError('');
+    setUpdatingAdvertiserId(advertiser._id);
+    try {
+      await api.put(`/users/${advertiser._id}/status`, { isActive });
+      await loadData();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update advertiser status');
+    } finally {
+      setUpdatingAdvertiserId(null);
+    }
+  };
 
   const columns = [
     { key: 'name', label: 'Advertiser' },
     { key: 'email', label: 'Email' },
     {
+      key: 'accountStatus',
+      label: 'Account status',
+      render: (row) => <Badge status={row.isActive === false ? 'inactive' : 'active'} />,
+    },
+    {
       key: 'joined',
       label: 'Joined',
       render: (row) => new Date(row.createdAt).toLocaleDateString(),
+      sortValue: (row) => row.createdAt,
     },
     {
       key: 'bookings',
@@ -86,9 +102,24 @@ export default function ManageAdvertisers() {
       key: 'actions',
       label: '',
       render: (row) => (
-        <Button variant="danger" size="sm" onClick={() => handleDelete(row._id)}>
-          Delete
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={row.isActive === false ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => handleStatusToggle(row)}
+            disabled={updatingAdvertiserId === row._id}
+          >
+            {row.isActive === false ? 'Reactivate' : 'Deactivate'}
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => handleDelete(row._id)}
+            disabled={updatingAdvertiserId === row._id}
+          >
+            Delete
+          </Button>
+        </div>
       ),
     },
   ];
@@ -97,7 +128,7 @@ export default function ManageAdvertisers() {
     <div>
       <PageHeader
         title="Manage Advertisers"
-        subtitle="All advertiser accounts on the platform. New advertisers self-register."
+        subtitle="Manage advertiser accounts. Deactivated advertisers cannot sign in; their reservations are kept."
       />
 
       {error && <Alert>{error}</Alert>}
@@ -105,20 +136,7 @@ export default function ManageAdvertisers() {
       {loading ? (
         <Loading label="Loading advertisers..." />
       ) : (
-        <>
-          <div className="mb-4 flex w-full sm:w-72">
-            <SearchBar
-              value={query}
-              onChange={setQuery}
-              placeholder="Search advertisers by name or email..."
-            />
-          </div>
-          <Table
-            columns={columns}
-            rows={visibleAdvertisers}
-            emptyMessage={query ? 'No advertisers match your search.' : 'No advertiser accounts yet.'}
-          />
-        </>
+        <Table columns={columns} rows={advertisers} emptyMessage="No advertiser accounts yet." />
       )}
     </div>
   );

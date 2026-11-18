@@ -33,8 +33,27 @@ exports.getUsers = async (req, res) => {
     const filter = {};
     if (req.query.role) filter.role = req.query.role;
 
-    const users = await User.find(filter).select('-password').populate('city', 'name');
-    res.json(users);
+    const users = await User.find(filter).select('-password');
+    const managerIds = users
+      .filter((user) => user.role === 'citymanager')
+      .map((user) => user._id);
+    const assignedCities = managerIds.length
+      ? await City.find({ cityManager: { $in: managerIds } }).select('name cityManager')
+      : [];
+    const cityByManagerId = new Map(
+      assignedCities.map((city) => [
+        city.cityManager.toString(),
+        { _id: city._id, name: city.name },
+      ])
+    );
+
+    res.json(users.map((user) => {
+      const result = user.toObject();
+      if (user.role === 'citymanager') {
+        result.city = cityByManagerId.get(user._id.toString()) || null;
+      }
+      return result;
+    }));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -46,6 +65,66 @@ exports.getUserById = async (req, res) => {
     const user = await User.findById(req.params.id).select('-password').populate('city', 'name');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @route  PUT /api/users/:id/approve   (superadmin only)
+exports.approveCityManager = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.role !== 'citymanager') {
+      return res.status(400).json({ message: 'Only city manager accounts can be approved' });
+    }
+
+    user.isApproved = true;
+    await user.save();
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isApproved: user.isApproved,
+      city: user.city,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @route  PUT /api/users/:id/status   (superadmin only)
+exports.updateUserStatus = async (req, res) => {
+  try {
+    const { isActive } = req.body;
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ message: 'isActive must be a boolean' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!['citymanager', 'advertiser'].includes(user.role)) {
+      return res.status(400).json({ message: 'Only city manager or advertiser accounts can be deactivated' });
+    }
+
+    if (!isActive && user.role === 'citymanager') {
+      await City.updateMany({ cityManager: user._id }, { cityManager: null });
+      user.city = null;
+    }
+    user.isActive = isActive;
+    await user.save();
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isApproved: user.isApproved,
+      isActive: user.isActive,
+      city: user.city,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

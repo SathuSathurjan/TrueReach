@@ -7,7 +7,6 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Table from '../../components/ui/Table';
 import Badge from '../../components/ui/Badge';
-import SearchBar from '../../components/ui/SearchBar';
 import Alert from '../../components/ui/Alert';
 import Loading from '../../components/ui/Loading';
 
@@ -15,7 +14,6 @@ export default function ManageNetworkBoards() {
   const [boards, setBoards] = useState([]);
   const [cities, setCities] = useState([]);
   const [cityFilter, setCityFilter] = useState('');
-  const [query, setQuery] = useState('');
   const [form, setForm] = useState({ name: '', location: '', city: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -45,19 +43,8 @@ export default function ManageNetworkBoards() {
   );
 
   const visibleBoards = useMemo(() => {
-    const byCity = cityFilter ? boards.filter((b) => b.city?._id === cityFilter) : boards;
-    const q = query.trim().toLowerCase();
-    if (!q) return byCity;
-    return byCity.filter((b) => {
-      const manager = cityById.get(b.city?._id)?.cityManager?.name || '';
-      return (
-        b.name.toLowerCase().includes(q) ||
-        (b.location || '').toLowerCase().includes(q) ||
-        (cityById.get(b.city?._id)?.name || '').toLowerCase().includes(q) ||
-        manager.toLowerCase().includes(q)
-      );
-    });
-  }, [boards, cityFilter, query, cityById]);
+    return cityFilter ? boards.filter((b) => b.city?._id === cityFilter) : boards;
+  }, [boards, cityFilter]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -99,6 +86,7 @@ export default function ManageNetworkBoards() {
       key: 'city',
       label: 'City',
       render: (row) => cityById.get(row.city?._id)?.name || '—',
+      sortValue: (row) => cityById.get(row.city?._id)?.name || '',
     },
     {
       key: 'manager',
@@ -107,6 +95,8 @@ export default function ManageNetworkBoards() {
         const manager = cityById.get(row.city?._id)?.cityManager;
         return manager ? manager.name : '— Unassigned —';
       },
+      searchValue: (row) => cityById.get(row.city?._id)?.cityManager?.name || '',
+      sortValue: (row) => cityById.get(row.city?._id)?.cityManager?.name || '',
     },
     {
       key: 'status',
@@ -177,11 +167,6 @@ export default function ManageNetworkBoards() {
             options={cityOptions}
             onChange={(e) => setCityFilter(e.target.value)}
           />
-          <SearchBar
-            value={query}
-            onChange={setQuery}
-            placeholder="Search boards..."
-          />
         </div>
       </div>
 
@@ -191,7 +176,7 @@ export default function ManageNetworkBoards() {
         <Table
           columns={columns}
           rows={visibleBoards}
-          emptyMessage={query ? 'No boards match your search.' : 'No boards found for this filter.'}
+          emptyMessage="No boards found for this filter."
         />
       )}
     </div>

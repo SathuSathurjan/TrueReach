@@ -1,17 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import PageHeader from '../../components/ui/PageHeader';
 import Button from '../../components/ui/Button';
 import Table from '../../components/ui/Table';
 import Badge from '../../components/ui/Badge';
-import SearchBar from '../../components/ui/SearchBar';
 import Alert from '../../components/ui/Alert';
 import Loading from '../../components/ui/Loading';
 
 export default function MyReservations() {
   const [reservations, setReservations] = useState([]);
-  const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -22,18 +20,6 @@ export default function MyReservations() {
       .catch((err) => setError(err.response?.data?.message || 'Failed to load reservations'))
       .finally(() => setLoading(false));
   }, []);
-
-  const visibleReservations = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return reservations;
-    return reservations.filter(
-      (r) =>
-        (r.board?.name || '').toLowerCase().includes(q) ||
-        (r.board?.location || '').toLowerCase().includes(q) ||
-        (r.board?.city?.name || '').toLowerCase().includes(q) ||
-        (r.status || '').toLowerCase().includes(q)
-    );
-  }, [reservations, query]);
 
   const columns = [
     { key: 'board', label: 'Board', render: (row) => row.board?.name || '—' },
@@ -48,6 +34,7 @@ export default function MyReservations() {
           </p>
         </div>
       ),
+      sortValue: (row) => row.timeslot?.startTime,
     },
     { key: 'status', label: 'Status', render: (row) => <Badge status={row.status} /> },
     {
@@ -80,20 +67,7 @@ export default function MyReservations() {
       {loading ? (
         <Loading label="Loading reservations..." />
       ) : (
-        <>
-          <div className="mb-4 flex w-full sm:w-72">
-            <SearchBar
-              value={query}
-              onChange={setQuery}
-              placeholder="Search by board, city, or status..."
-            />
-          </div>
-          <Table
-            columns={columns}
-            rows={visibleReservations}
-            emptyMessage={query ? 'No reservations match your search.' : "You haven't booked any slots yet. Browse boards to get started."}
-          />
-        </>
+        <Table columns={columns} rows={reservations} emptyMessage="You haven't booked any slots yet. Browse boards to get started." />
       )}
     </div>
   );

@@ -5,13 +5,11 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Table from '../../components/ui/Table';
 import Badge from '../../components/ui/Badge';
-import SearchBar from '../../components/ui/SearchBar';
 import Alert from '../../components/ui/Alert';
 import Loading from '../../components/ui/Loading';
 
 export default function AdApprovalQueue() {
   const [reservations, setReservations] = useState([]);
-  const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -48,17 +46,8 @@ export default function AdApprovalQueue() {
     }
   };
 
-  const q = query.trim().toLowerCase();
-  const matches = (r) =>
-    !q ||
-    (r.advertiser?.name || '').toLowerCase().includes(q) ||
-    (r.advertiser?.email || '').toLowerCase().includes(q) ||
-    (r.board?.name || '').toLowerCase().includes(q) ||
-    (r.board?.location || '').toLowerCase().includes(q) ||
-    (r.board?.city?.name || '').toLowerCase().includes(q);
-
-  const pending = reservations.filter((r) => r.status === 'pending' && matches(r));
-  const others = reservations.filter((r) => r.status !== 'pending' && matches(r));
+  const pending = reservations.filter((r) => r.status === 'pending');
+  const others = reservations.filter((r) => r.status !== 'pending');
 
   const pendingColumns = [
     {
@@ -92,6 +81,7 @@ export default function AdApprovalQueue() {
           </p>
         </div>
       ),
+      sortValue: (row) => row.timeslot?.startTime,
     },
     {
       key: 'creative',
@@ -133,6 +123,7 @@ export default function AdApprovalQueue() {
       key: 'slot',
       label: 'Slot',
       render: (row) => new Date(row.timeslot?.startTime).toLocaleString(),
+      sortValue: (row) => row.timeslot?.startTime,
     },
     { key: 'status', label: 'Status', render: (row) => <Badge status={row.status} /> },
   ];
@@ -150,19 +141,11 @@ export default function AdApprovalQueue() {
         <Loading label="Loading reservations..." />
       ) : (
         <div className="flex flex-col gap-6">
-          <div className="flex w-full sm:w-72">
-            <SearchBar
-              value={query}
-              onChange={setQuery}
-              placeholder="Search advertiser, board, or city..."
-            />
-          </div>
-
           <Card title={`Pending approvals (${pending.length})`}>
             <Table
               columns={pendingColumns}
               rows={pending}
-              emptyMessage={q ? 'No pending reservations match your search.' : 'No reservations awaiting approval.'}
+              emptyMessage="No reservations awaiting approval."
             />
           </Card>
 
@@ -170,7 +153,7 @@ export default function AdApprovalQueue() {
             <Table
               columns={historyColumns}
               rows={others}
-              emptyMessage={q ? 'No processed reservations match your search.' : 'No processed reservations yet.'}
+              emptyMessage="No processed reservations yet."
             />
           </Card>
         </div>

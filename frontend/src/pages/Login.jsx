@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
+import Alert from '../components/ui/Alert';
 
 const roleHomePage = {
   superadmin: '/admin',
@@ -70,7 +71,7 @@ export default function Login() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          {error && <p className="text-sm text-danger">{error}</p>}
+          {error && <Alert>{error}</Alert>}
           <Button type="submit" disabled={submitting} className="w-full">
             {submitting ? 'Signing in...' : 'Sign in'}
           </Button>

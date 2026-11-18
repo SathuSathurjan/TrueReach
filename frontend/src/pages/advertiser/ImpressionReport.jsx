@@ -30,7 +30,7 @@ export default function ImpressionReport() {
   }, [reservationId]);
 
   const columns = [
-    { key: 'time', label: 'Time', render: (r) => new Date(r.recorded_at).toLocaleString() },
+    { key: 'time', label: 'Time', render: (r) => new Date(r.recorded_at).toLocaleString(), sortValue: (r) => r.recorded_at },
     { key: 'people', label: 'People', render: (r) => r.people_count },
     { key: 'vehicles', label: 'Vehicles', render: (r) => r.vehicle_count },
   ];

@@ -1,6 +1,6 @@
 // backend/test/testFlow.js
 // Requires Node 18+ (built-in fetch). Run with: node test/testFlow.js
-// Make sure your server is already running (npm run dev) before running this.
+// Run `npm run seed` once, then start the server with `npm run dev` before running this.
 
 const BASE = 'http://localhost:5000/api';
 let pass = 0;
@@ -36,36 +36,52 @@ const rand = () => Math.floor(Math.random() * 1000000);
   console.log('---TrueReach Backend Test Flow ---\n');
 
   const suffix = rand();
-  const superadminEmail = `superadmin${suffix}truereach.com`;
-  const managerEmail = `manager${suffix}truereach.com`;
-  const advertiserEmail = `advertiser${suffix}truereach.com`;
-  const advertiser2Email = `advertiser2_${suffix}truereach.com`;
+  const superadminEmail = `superadmin${suffix}@truereach.test`;
+  const managerEmail = `manager${suffix}@truereach.test`;
+  const advertiserEmail = `advertiser${suffix}@truereach.test`;
+  const advertiser2Email = `advertiser2_${suffix}@truereach.test`;
 
-  // 1. Register three roles
+  // 1. Log in as the seeded superadmin; public registration cannot create admins.
+  const adminLogin = await req('POST', '/auth/login', { email: 'admin@truereach.lk', password: 'Demo@123' });
+  check('Seeded superadmin can log in', adminLogin.status === 200, JSON.stringify(adminLogin.data));
+  const superToken = adminLogin.data?.token;
+
   const r1 = await req('POST', '/auth/register', { name: 'Super Admin', email: superadminEmail, password: '123456', role: 'superadmin' });
-  check('Register superadmin', r1.status === 201, JSON.stringify(r1.data));
-  const superToken = r1.data?.token;
+  check('Public superadmin registration rejected', r1.status === 400);
 
+  // 2. City manager registration requires admin approval.
   const r2 = await req('POST', '/auth/register', { name: 'City Manager', email: managerEmail, password: '123456', role: 'citymanager' });
-  check('Register citymanager', r2.status === 201, JSON.stringify(r2.data));
-  const managerToken = r2.data?.token;
-  const managerId = r2.data?._id;
+  check('City manager registration is pending', r2.status === 201 && r2.data?.status === 'pending');
+  const pendingLogin = await req('POST', '/auth/login', { email: managerEmail, password: '123456' });
+  check('Pending city manager cannot log in', pendingLogin.status === 403);
+  const managersRes = await req('GET', '/users?role=citymanager', null, superToken);
+  const pendingManager = managersRes.data?.find((manager) => manager.email === managerEmail);
+  const approveManager = await req('PUT', `/users/${pendingManager?._id}/approve`, {}, superToken);
+  check('Superadmin approves city manager', approveManager.status === 200 && approveManager.data?.isApproved === true);
+  const managerLogin = await req('POST', '/auth/login', { email: managerEmail, password: '123456' });
+  check('Approved city manager can log in', managerLogin.status === 200);
+  const managerToken = managerLogin.data?.token;
+  const managerId = managerLogin.data?._id;
 
+  // 3. Advertisers are active immediately.
   const r3 = await req('POST', '/auth/register', { name: 'Advertiser One', email: advertiserEmail, password: '123456', role: 'advertiser' });
-  check('Register advertiser', r3.status === 201, JSON.stringify(r3.data));
+  check('Register advertiser immediately', r3.status === 201 && Boolean(r3.data?.token), JSON.stringify(r3.data));
   const advertiserToken = r3.data?.token;
+  const advertiserId = r3.data?._id;
 
   const r4 = await req('POST', '/auth/register', { name: 'Advertiser Two', email: advertiser2Email, password: '123456', role: 'advertiser' });
   const advertiser2Token = r4.data?.token;
 
-  // 2. Duplicate registration should fail
-  const rDup = await req('POST', '/auth/register', { name: 'Dup', email: superadminEmail, password: '123456', role: 'superadmin' });
+  // 4. Duplicate registration should fail.
+  const rDup = await req('POST', '/auth/register', { name: 'Dup', email: advertiserEmail, password: '123456', role: 'advertiser' });
   check('Duplicate email registration rejected', rDup.status === 400);
 
-  // 3. Superadmin creates a city
+  // 5. Superadmin creates a city.
   const cityRes = await req('POST', '/cities', { name: `TestCity${suffix}` }, superToken);
   check('Superadmin creates city', cityRes.status === 201, JSON.stringify(cityRes.data));
   const cityId = cityRes.data?._id;
+  const duplicateCityRes = await req('POST', '/cities', { name: ` testcity${suffix} ` }, superToken);
+  check('Duplicate city name rejected regardless of case and whitespace', duplicateCityRes.status === 400);
 
   // 4. Advertiser CANNOT create a city
   const cityForbidden = await req('POST', '/cities', { name: `HackCity${suffix}` }, advertiserToken);
@@ -127,6 +143,29 @@ const rand = () => Math.floor(Math.random() * 1000000);
   // 15. Second advertiser CANNOT view first advertiser's impression summary
   const forbiddenSummary = await req('GET', `/impressions/summary/${reservationId}`, null, advertiser2Token);
   check('Other advertiser blocked from viewing summary', forbiddenSummary.status === 403);
+
+  const deactivateManager = await req('PUT', `/users/${managerId}/status`, { isActive: false }, superToken);
+  check('Deactivating city manager unassigns their city', deactivateManager.status === 200 && deactivateManager.data?.isActive === false);
+  const citiesAfterDeactivation = await req('GET', '/cities', null, superToken);
+  check('Deactivated city is unassigned', !citiesAfterDeactivation.data?.find((city) => city._id === cityId)?.cityManager);
+  const inactiveManagerAccess = await req('GET', '/boards', null, managerToken);
+  check('Deactivated city manager access is blocked', inactiveManagerAccess.status === 403);
+  const inactiveManagerLogin = await req('POST', '/auth/login', { email: managerEmail, password: '123456' });
+  check('Deactivated city manager cannot log in with alert message', inactiveManagerLogin.status === 403 && inactiveManagerLogin.data?.message.includes('deactivated'));
+
+  const reactivateManager = await req('PUT', `/users/${managerId}/status`, { isActive: true }, superToken);
+  check('City manager can be reactivated', reactivateManager.status === 200 && reactivateManager.data?.isActive === true);
+  const reassignCity = await req('PUT', `/cities/${cityId}`, { cityManager: managerId }, superToken);
+  check('Reactivated manager can be assigned again', reassignCity.status === 200 && reassignCity.data?.cityManager === managerId);
+
+  const deactivateAdvertiser = await req('PUT', `/users/${advertiserId}/status`, { isActive: false }, superToken);
+  check('Advertiser can be deactivated', deactivateAdvertiser.status === 200 && deactivateAdvertiser.data?.isActive === false);
+  const inactiveAdvertiserAccess = await req('GET', '/reservations', null, advertiserToken);
+  check('Deactivated advertiser access is blocked', inactiveAdvertiserAccess.status === 403);
+  const inactiveAdvertiserLogin = await req('POST', '/auth/login', { email: advertiserEmail, password: '123456' });
+  check('Deactivated advertiser cannot log in with alert message', inactiveAdvertiserLogin.status === 403 && inactiveAdvertiserLogin.data?.message.includes('deactivated'));
+  const reactivateAdvertiser = await req('PUT', `/users/${advertiserId}/status`, { isActive: true }, superToken);
+  check('Advertiser can be reactivated', reactivateAdvertiser.status === 200 && reactivateAdvertiser.data?.isActive === true);
 
   console.log(`\n--- Results: ${pass} passed, ${fail} failed ---`);
 })();

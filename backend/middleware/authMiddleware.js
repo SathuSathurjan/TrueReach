@@ -1,21 +1,36 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
 // Verifies the JWT token and attaches user info to req.user
-exports.protect = (req, res, next) => {
+exports.protect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'Not authorized, no token' });
   }
 
+  let decoded;
   try {
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // { id, role }
-    next();
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch (err) {
-    res.status(401).json({ message: 'Not authorized, invalid token' });
+    return res.status(401).json({ message: 'Not authorized, invalid token' });
   }
+
+  if (['citymanager', 'advertiser'].includes(decoded.role)) {
+    try {
+      const user = await User.findById(decoded.id).select('isActive');
+      if (!user || user.isActive === false) {
+        return res.status(403).json({ message: 'Account is inactive or unavailable' });
+      }
+    } catch (err) {
+      console.error('Failed to verify account status:', err.message);
+      return res.status(500).json({ message: 'Unable to verify account status' });
+    }
+  }
+
+  req.user = decoded; // { id, role }
+  return next();
 };
 
 // Restricts access to specific roles
