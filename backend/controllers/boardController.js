@@ -10,7 +10,7 @@ const managerOwnsCity = async (userId, cityId) => {
 // @route  POST /api/boards   (superadmin: any city | citymanager: own city only)
 exports.createBoard = async (req, res) => {
   try {
-    const { name, location, city, status } = req.body;
+    const { name, location, city } = req.body;
 
     if (!name || !location || !city) {
       return res.status(400).json({ message: 'name, location and city are required' });
@@ -26,7 +26,12 @@ exports.createBoard = async (req, res) => {
       }
     }
 
-    const board = await Board.create({ name, location, city, status });
+    const board = await Board.create({
+      name,
+      location,
+      city,
+      status: cityDoc.cityManager ? 'active' : 'inactive',
+    });
     res.status(201).json(board);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -45,6 +50,7 @@ exports.getBoards = async (req, res) => {
       filter.city = city._id;
     } else if (req.user.role === 'advertiser') {
       filter.status = 'active';
+      filter.city = { $in: await City.find({ cityManager: { $ne: null } }).distinct('_id') };
     }
     // superadmin -> no filter, sees everything
 
@@ -64,6 +70,11 @@ exports.getBoardById = async (req, res) => {
     if (req.user.role === 'citymanager') {
       const owns = await managerOwnsCity(req.user.id, board.city._id);
       if (!owns) return res.status(403).json({ message: 'Access denied' });
+    } else if (
+      req.user.role === 'advertiser' &&
+      (board.status !== 'active' || !board.city?.cityManager)
+    ) {
+      return res.status(404).json({ message: 'Board not found' });
     }
 
     res.json(board);
@@ -86,7 +97,16 @@ exports.updateBoard = async (req, res) => {
     const { name, location, status } = req.body;
     if (name) board.name = name;
     if (location) board.location = location;
-    if (status) board.status = status;
+    if (status) {
+      const cityHasManager = await City.exists({
+        _id: board.city,
+        cityManager: { $ne: null },
+      });
+      if (status === 'active' && !cityHasManager) {
+        return res.status(400).json({ message: 'A city manager must be assigned before activating a board' });
+      }
+      board.status = status;
+    }
 
     await board.save();
     res.json(board);

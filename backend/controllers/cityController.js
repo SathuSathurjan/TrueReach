@@ -1,5 +1,6 @@
 const City = require('../models/City');
 const User = require('../models/User');
+const Board = require('../models/Board');
 
 // @route  POST /api/cities   (superadmin only)
 exports.createCity = async (req, res) => {
@@ -112,6 +113,10 @@ exports.updateCity = async (req, res) => {
       if (cityManager) {
         await User.findByIdAndUpdate(cityManager, { city: city._id });
       }
+      await Board.updateMany(
+        { city: city._id },
+        { status: city.cityManager ? 'active' : 'inactive' }
+      );
     }
 
     res.json(city);

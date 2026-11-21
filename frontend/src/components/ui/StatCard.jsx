@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 const DEFAULT_GRADIENTS = [
   ['#2563EB', '#3B82F6'],
   ['#06B6D4', '#22D3EE'],
@@ -6,9 +8,9 @@ const DEFAULT_GRADIENTS = [
   ['#8B5CF6', '#A78BFA'],
 ];
 
-export default function StatCard({ label, value, sub, icon: Icon, index = 0, from, to }) {
+export default function StatCard({ label, value, sub, icon: Icon, index = 0, from, to, linkTo }) {
   const [f, t] = from && to ? [from, to] : DEFAULT_GRADIENTS[index % DEFAULT_GRADIENTS.length];
-  return (
+  const card = (
     <div
       className="relative overflow-hidden rounded-2xl p-5 text-white"
       style={{ background: `linear-gradient(135deg, ${f}, ${t})` }}
@@ -26,5 +28,16 @@ export default function StatCard({ label, value, sub, icon: Icon, index = 0, fro
       <div className="text-[26px] font-bold leading-none tracking-tight">{value}</div>
       {sub && <div className="mt-2 text-[12.5px] opacity-90">{sub}</div>}
     </div>
+  );
+
+  if (!linkTo) return card;
+
+  return (
+    <Link
+      to={linkTo}
+      className="block rounded-2xl transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-signal"
+    >
+      {card}
+    </Link>
   );
 }

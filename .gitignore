@@ -33,3 +33,7 @@ coverage/
 Thumbs.db
 .vscode/
 .idea/
+
+# Uploaded ad videos
+backend/uploads/*
+!backend/uploads/.gitignore

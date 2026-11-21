@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const City = require('../models/City');
+const Board = require('../models/Board');
 
 // @route  POST /api/users   (superadmin only — creates a user of any role)
 exports.createUser = async (req, res) => {
@@ -110,7 +111,12 @@ exports.updateUserStatus = async (req, res) => {
     }
 
     if (!isActive && user.role === 'citymanager') {
+      const cities = await City.find({ cityManager: user._id }).select('_id');
       await City.updateMany({ cityManager: user._id }, { cityManager: null });
+      await Board.updateMany(
+        { city: { $in: cities.map((city) => city._id) } },
+        { status: 'inactive' }
+      );
       user.city = null;
     }
     user.isActive = isActive;
@@ -156,8 +162,13 @@ exports.deleteUser = async (req, res) => {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // If this user was assigned as a city manager, unassign them from that city
+    // If this user was assigned as a city manager, unassign them and deactivate their boards.
+    const cities = await City.find({ cityManager: user._id }).select('_id');
     await City.updateMany({ cityManager: user._id }, { cityManager: null });
+    await Board.updateMany(
+      { city: { $in: cities.map((city) => city._id) } },
+      { status: 'inactive' }
+    );
 
     res.json({ message: 'User deleted' });
   } catch (err) {

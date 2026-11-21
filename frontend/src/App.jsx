@@ -99,6 +99,7 @@ export default function App() {
             <Route index element={<Overview />} />
             <Route path="cities" element={<ManageCities />} />
             <Route path="boards" element={<ManageNetworkBoards />} />
+            <Route path="boards/:boardId/timeslots" element={<ManageTimeslots adminMode />} />
             <Route path="managers" element={<ManageCityManagers />} />
             <Route path="advertisers" element={<ManageAdvertisers />} />
             <Route path="reservations" element={<AllReservations />} />

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import PageHeader from '../../components/ui/PageHeader';
 import Card from '../../components/ui/Card';
@@ -104,13 +105,33 @@ export default function ManageNetworkBoards() {
       render: (row) => <Badge status={row.status} />,
     },
     {
+      key: 'timeslots',
+      label: 'Timeslots',
+      render: (row) => (
+        <Link
+          to={`/admin/boards/${row._id}/timeslots`}
+          className="font-medium text-signal hover:underline"
+        >
+          View timeslots
+        </Link>
+      ),
+    },
+    {
       key: 'actions',
       label: '',
-      render: (row) => (
-        <Button variant="secondary" size="sm" onClick={() => handleStatusToggle(row)}>
-          {row.status === 'active' ? 'Deactivate' : 'Activate'}
-        </Button>
-      ),
+      render: (row) => {
+        const hasManager = Boolean(cityById.get(row.city?._id)?.cityManager);
+        return (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handleStatusToggle(row)}
+            disabled={!hasManager && row.status !== 'active'}
+          >
+            {row.status === 'active' ? 'Deactivate' : hasManager ? 'Activate' : 'Manager required'}
+          </Button>
+        );
+      },
     },
   ];
 

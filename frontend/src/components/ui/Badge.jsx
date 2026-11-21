@@ -7,6 +7,7 @@ const styles = {
   idle: { bg: '#F1F3F9', fg: '#6B7386' },
   available: { bg: '#DCFCE7', fg: '#16A34A' },
   booked: { bg: '#EAF1FF', fg: '#2563EB' },
+  unavailable: { bg: '#FEE2E2', fg: '#DC2626' },
 };
 
 export default function Badge({ status }) {

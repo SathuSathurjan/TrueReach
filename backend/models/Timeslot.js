@@ -16,7 +16,7 @@ const timeslotSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['available', 'booked'],
+    enum: ['available', 'booked', 'unavailable'],
     default: 'available',
   },
 }, { timestamps: true });

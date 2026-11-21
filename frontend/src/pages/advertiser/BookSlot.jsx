@@ -13,7 +13,7 @@ export default function BookSlot() {
   const navigate = useNavigate();
   const [board, setBoard] = useState(null);
   const [slots, setSlots] = useState([]);
-  const [adCreativeUrl, setAdCreativeUrl] = useState('');
+  const [adCreative, setAdCreative] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -44,7 +44,12 @@ export default function BookSlot() {
     setError('');
     setBooking(true);
     try {
-      await api.post('/reservations', { timeslot: selectedSlot, adCreativeUrl });
+      const formData = new FormData();
+      formData.append('timeslot', selectedSlot);
+      if (adCreative) {
+        formData.append('adCreative', adCreative);
+      }
+      await api.post('/reservations', formData);
       navigate('/advertiser/reservations');
     } catch (err) {
       setError(err.response?.data?.message || 'Booking failed — this slot may have just been taken');
@@ -106,15 +111,14 @@ export default function BookSlot() {
             <Card title="Ad creative">
               <div className="flex flex-col gap-4">
                 <Input
-                  label="Ad creative URL"
-                  type="url"
-                  placeholder="https://example.com/my-ad.jpg"
-                  value={adCreativeUrl}
-                  onChange={(e) => setAdCreativeUrl(e.target.value)}
+                  label="Upload ad video"
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => setAdCreative(e.target.files?.[0] || null)}
                   required
                 />
                 <p className="text-xs text-gray-500">
-                  Link to an image or video of your ad. The city manager will review it before approval.
+                  Upload a video file for your ad. The city manager will review it before approval.
                 </p>
                 <div>
                   <Button type="submit" disabled={!selectedSlot || booking}>

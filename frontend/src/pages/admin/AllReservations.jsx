@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import PageHeader from '../../components/ui/PageHeader';
 import Select from '../../components/ui/Select';
@@ -10,7 +11,11 @@ import Loading from '../../components/ui/Loading';
 export default function AllReservations() {
   const [reservations, setReservations] = useState([]);
   const [cities, setCities] = useState([]);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedStatus = searchParams.get('status');
+  const statusFilter = ['pending', 'approved', 'rejected'].includes(requestedStatus)
+    ? requestedStatus
+    : '';
   const [cityFilter, setCityFilter] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -132,7 +137,12 @@ export default function AllReservations() {
                   { value: 'approved', label: `Approved (${countByStatus.approved})` },
                   { value: 'rejected', label: `Rejected (${countByStatus.rejected})` },
                 ]}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  const params = new URLSearchParams(searchParams);
+                  if (e.target.value) params.set('status', e.target.value);
+                  else params.delete('status');
+                  setSearchParams(params, { replace: true });
+                }}
               />
             </div>
             <div className="w-full sm:w-48">

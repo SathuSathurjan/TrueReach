@@ -7,9 +7,11 @@ import Table from '../../components/ui/Table';
 import Badge from '../../components/ui/Badge';
 import Alert from '../../components/ui/Alert';
 import Loading from '../../components/ui/Loading';
+import AdvertiserDetailsModal from '../../components/ui/AdvertiserDetailsModal';
 
 export default function AdApprovalQueue() {
   const [reservations, setReservations] = useState([]);
+  const [selectedAdvertiser, setSelectedAdvertiser] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -48,17 +50,29 @@ export default function AdApprovalQueue() {
 
   const pending = reservations.filter((r) => r.status === 'pending');
   const others = reservations.filter((r) => r.status !== 'pending');
+  const advertiserReservations = selectedAdvertiser
+    ? reservations.filter((reservation) => reservation.advertiser?._id === selectedAdvertiser._id)
+    : [];
+
+  const renderAdvertiser = (advertiser) => (
+    <div>
+      <button
+        type="button"
+        onClick={() => setSelectedAdvertiser(advertiser)}
+        disabled={!advertiser?._id}
+        className="text-left font-medium text-signal hover:underline disabled:text-ink disabled:no-underline"
+      >
+        {advertiser?.name || '—'}
+      </button>
+      {advertiser?.email && <p className="text-xs text-gray-500">{advertiser.email}</p>}
+    </div>
+  );
 
   const pendingColumns = [
     {
       key: 'advertiser',
       label: 'Advertiser',
-      render: (row) => (
-        <div>
-          <p className="font-medium text-ink">{row.advertiser?.name || '—'}</p>
-          <p className="text-xs text-gray-500">{row.advertiser?.email}</p>
-        </div>
-      ),
+      render: (row) => renderAdvertiser(row.advertiser),
     },
     {
       key: 'board',
@@ -117,7 +131,7 @@ export default function AdApprovalQueue() {
   ];
 
   const historyColumns = [
-    { key: 'advertiser', label: 'Advertiser', render: (row) => row.advertiser?.name || '—' },
+    { key: 'advertiser', label: 'Advertiser', render: (row) => renderAdvertiser(row.advertiser) },
     { key: 'board', label: 'Board', render: (row) => row.board?.name || '—' },
     {
       key: 'slot',
@@ -157,6 +171,14 @@ export default function AdApprovalQueue() {
             />
           </Card>
         </div>
+      )}
+
+      {selectedAdvertiser && (
+        <AdvertiserDetailsModal
+          advertiser={selectedAdvertiser}
+          reservations={advertiserReservations}
+          onClose={() => setSelectedAdvertiser(null)}
+        />
       )}
     </div>
   );

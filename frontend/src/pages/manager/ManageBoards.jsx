@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import PageHeader from '../../components/ui/PageHeader';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import Select from '../../components/ui/Select';
 import Table from '../../components/ui/Table';
 import Badge from '../../components/ui/Badge';
 import Alert from '../../components/ui/Alert';
@@ -14,6 +15,12 @@ import Loading from '../../components/ui/Loading';
 export default function ManageBoards() {
   const { user } = useAuth();
   const [boards, setBoards] = useState([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedStatus = searchParams.get('status');
+  const statusFilter = ['active', 'inactive'].includes(requestedStatus) ? requestedStatus : '';
+  const visibleBoards = statusFilter
+    ? boards.filter((board) => board.status === statusFilter)
+    : boards;
   const [form, setForm] = useState({ name: '', location: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -123,7 +130,26 @@ export default function ManageBoards() {
       {loading ? (
         <Loading label="Loading boards..." />
       ) : (
-        <Table columns={columns} rows={boards} emptyMessage="No boards in your city yet." />
+        <>
+          <div className="mb-4 max-w-xs">
+            <Select
+              label="Filter by status"
+              value={statusFilter}
+              options={[
+                { value: '', label: 'All statuses' },
+                { value: 'active', label: 'Active boards' },
+                { value: 'inactive', label: 'Inactive boards' },
+              ]}
+              onChange={(e) => {
+                const params = new URLSearchParams(searchParams);
+                if (e.target.value) params.set('status', e.target.value);
+                else params.delete('status');
+                setSearchParams(params, { replace: true });
+              }}
+            />
+          </div>
+          <Table columns={columns} rows={visibleBoards} emptyMessage="No boards in your city match this filter." />
+        </>
       )}
     </div>
   );

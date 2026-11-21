@@ -64,11 +64,15 @@ export default function Overview() {
 
   const boardsByCity = useMemo(() => {
     const map = new Map();
-    for (const city of cities) map.set(city._id, 0);
+    for (const city of cities) map.set(String(city._id), 0);
     for (const b of boards) {
-      if (map.has(b.city?._id)) map.set(b.city._id, map.get(b.city._id) + 1);
+      const cityId = typeof b.city === 'object' ? b.city?._id : b.city;
+      if (cityId != null && map.has(String(cityId))) {
+        const key = String(cityId);
+        map.set(key, map.get(key) + 1);
+      }
     }
-    return cities.map((c) => ({ name: c.name, count: map.get(c._id) || 0 }));
+    return cities.map((city) => ({ name: city.name, count: map.get(String(city._id)) || 0 }));
   }, [cities, boards]);
 
   const totalPeople = impressions.reduce((s, i) => s + (i.people_count || 0), 0);
@@ -88,9 +92,9 @@ export default function Overview() {
       ) : (
         <div className="flex flex-col gap-5">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Total Cities" value={cities.length} icon={Building2} from="#2563EB" to="#3B82F6" />
-            <StatCard label="Total Boards" value={boards.length} icon={MonitorPlay} from="#06B6D4" to="#22D3EE" />
-            <StatCard label="Total Reservations" value={reservations.length} icon={CalendarClock} from="#0EA5E9" to="#38BDF8" />
+            <StatCard label="Total Cities" value={cities.length} icon={Building2} from="#2563EB" to="#3B82F6" linkTo="/admin/cities" />
+            <StatCard label="Total Boards" value={boards.length} icon={MonitorPlay} from="#06B6D4" to="#22D3EE" linkTo="/admin/boards" />
+            <StatCard label="Total Reservations" value={reservations.length} icon={CalendarClock} from="#0EA5E9" to="#38BDF8" linkTo="/admin/reservations" />
             <StatCard
               label="Pending Approvals"
               value={pending.length}
@@ -98,6 +102,7 @@ export default function Overview() {
               icon={ClipboardList}
               from="#4F46E5"
               to="#818CF8"
+              linkTo="/admin/reservations?status=pending"
             />
           </div>
 

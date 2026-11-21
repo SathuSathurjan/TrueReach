@@ -20,6 +20,9 @@ exports.createReservation = async (req, res) => {
     if (!timeslot) {
       return res.status(400).json({ message: 'timeslot is required' });
     }
+    if (!req.file && !adCreativeUrl) {
+      return res.status(400).json({ message: 'adCreative video file is required' });
+    }
 
     const slotDoc = await Timeslot.findById(timeslot);
     if (!slotDoc) return res.status(404).json({ message: 'Timeslot not found' });
@@ -41,7 +44,7 @@ exports.createReservation = async (req, res) => {
         advertiser: req.user.id,
         board: slotDoc.board,
         timeslot,
-        adCreativeUrl: adCreativeUrl || '',
+        adCreativeUrl: req.file ? `/uploads/${req.file.filename}` : adCreativeUrl,
         status: 'pending',
       });
       return res.status(201).json(reservation);
@@ -130,16 +133,23 @@ exports.approveReservation = async (req, res) => {
       if (!owns) return res.status(403).json({ message: 'Access denied' });
     }
 
-    reservation.status = 'approved';
-    await reservation.save();
-    res.json(reservation);
+    const approvedReservation = await Reservation.findOneAndUpdate(
+      { _id: req.params.id, status: 'pending' },
+      { status: 'approved' },
+      { new: true }
+    );
+    if (!approvedReservation) {
+      return res.status(400).json({ message: 'Only pending reservations can be approved' });
+    }
+
+    res.json(approvedReservation);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
 // @route  PUT /api/reservations/:id/reject   (superadmin, or citymanager who owns the board)
-// Rejecting frees the timeslot back up for other advertisers.
+// Rejecting frees the timeslot unless it was explicitly marked unavailable.
 exports.rejectReservation = async (req, res) => {
   try {
     const reservation = await Reservation.findById(req.params.id);
@@ -150,13 +160,22 @@ exports.rejectReservation = async (req, res) => {
       if (!owns) return res.status(403).json({ message: 'Access denied' });
     }
 
-    reservation.status = 'rejected';
-    await reservation.save();
+    const rejectedReservation = await Reservation.findOneAndUpdate(
+      { _id: req.params.id, status: { $in: ['pending', 'approved'] } },
+      { status: 'rejected' },
+      { new: true }
+    );
+    if (!rejectedReservation) {
+      return res.status(400).json({ message: 'Reservation is already rejected' });
+    }
 
-    // Free up the timeslot so other advertisers can book it
-    await Timeslot.findByIdAndUpdate(reservation.timeslot, { status: 'available' });
+    // Keep a slot unavailable if an admin or manager explicitly blocked it.
+    await Timeslot.findOneAndUpdate(
+      { _id: rejectedReservation.timeslot, status: 'booked' },
+      { status: 'available' }
+    );
 
-    res.json(reservation);
+    res.json(rejectedReservation);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

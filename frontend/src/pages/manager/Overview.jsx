@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   Building2, MonitorPlay, ClipboardList, CalendarClock, Users, Car,
-  MapPin, CheckCircle2, XCircle, AlertTriangle, Clock,
+  MapPin, CheckCircle2, XCircle, Clock,
 } from 'lucide-react';
 import api from '../../services/api';
 import PageHeader from '../../components/ui/PageHeader';
@@ -62,7 +62,6 @@ export default function Overview() {
 
   const totalBoards = boards.length;
   const activeBoards = boards.filter((b) => b.status === 'active').length;
-  const idleBoards = totalBoards - activeBoards;
 
   const pending = reservations.filter((r) => r.status === 'pending');
   const approved = reservations.filter((r) => r.status === 'approved');
@@ -104,47 +103,6 @@ export default function Overview() {
       .slice(0, 5);
   }, [reservations]);
 
-  const notifications = useMemo(() => {
-    const items = [];
-    if (pending.length > 0) {
-      items.push({
-        icon: Clock,
-        bg: '#FEF3C7',
-        color: '#D97706',
-        title: `${pending.length} ad approval${pending.length > 1 ? 's' : ''} awaiting review`,
-        sub: pending[0]?.advertiser?.name ? `Earliest: ${pending[0].advertiser.name}` : 'Review in the approval queue',
-      });
-    }
-    if (idleBoards > 0) {
-      items.push({
-        icon: AlertTriangle,
-        bg: '#F1F3F9',
-        color: '#6B7386',
-        title: `${idleBoards} board${idleBoards > 1 ? 's' : ''} currently idle`,
-        sub: 'Consider adding more time slots',
-      });
-    }
-    if (approved.length > 0) {
-      items.push({
-        icon: CheckCircle2,
-        bg: '#DCFCE7',
-        color: '#16A34A',
-        title: `${approved.length} active campaign${approved.length > 1 ? 's' : ''} running`,
-        sub: 'Tracked on your boards',
-      });
-    }
-    if (rejected.length > 0) {
-      items.push({
-        icon: XCircle,
-        bg: '#FEE2E2',
-        color: '#DC2626',
-        title: `${rejected.length} reservation${rejected.length > 1 ? 's' : ''} rejected`,
-        sub: 'Rejected bookings over time',
-      });
-    }
-    return items;
-  }, [pending, idleBoards, approved, rejected]);
-
   return (
     <div>
       <PageHeader title="Overview" subtitle="A summary of activity across your city." />
@@ -156,10 +114,10 @@ export default function Overview() {
       ) : (
         <div className="flex flex-col gap-5">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Total Boards" value={totalBoards} sub="In your city" icon={Building2} from="#2563EB" to="#3B82F6" />
-            <StatCard label="Active Boards" value={`${activeBoards} / ${totalBoards}`} sub="Currently online" icon={MonitorPlay} from="#06B6D4" to="#22D3EE" />
-            <StatCard label="Pending Approvals" value={pending.length} sub="Awaiting your review" icon={ClipboardList} from="#4F46E5" to="#818CF8" />
-            <StatCard label="Total Reservations" value={reservations.length} sub={`${approved.length} approved`} icon={CalendarClock} from="#8B5CF6" to="#A78BFA" />
+            <StatCard label="Total Boards" value={totalBoards} sub="In your city" icon={Building2} from="#2563EB" to="#3B82F6" linkTo="/manager/boards" />
+            <StatCard label="Active Boards" value={`${activeBoards} / ${totalBoards}`} sub="Currently online" icon={MonitorPlay} from="#06B6D4" to="#22D3EE" linkTo="/manager/boards?status=active" />
+            <StatCard label="Pending Approvals" value={pending.length} sub="Awaiting your review" icon={ClipboardList} from="#4F46E5" to="#818CF8" linkTo="/manager/approvals" />
+            <StatCard label="Total Reservations" value={reservations.length} sub={`${approved.length} approved`} icon={CalendarClock} from="#8B5CF6" to="#A78BFA" linkTo="/manager/approvals" />
           </div>
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
@@ -227,8 +185,8 @@ export default function Overview() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
-            <Card title="Recent reservations" className="lg:col-span-3">
+          <div className="grid grid-cols-1 gap-5">
+            <Card title="Recent reservations">
               {recentReservations.length === 0 ? (
                 <p className="py-8 text-center text-sm" style={{ color: '#8B93A7' }}>
                   No reservations yet.
@@ -257,37 +215,6 @@ export default function Overview() {
               )}
             </Card>
 
-            <Card title="Notifications" className="lg:col-span-2">
-              {notifications.length === 0 ? (
-                <p className="py-8 text-center text-sm" style={{ color: '#8B93A7' }}>
-                  You're all caught up.
-                </p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {notifications.map((n, i) => {
-                    const Icon = n.icon;
-                    return (
-                      <div key={i} className="flex items-start gap-3 rounded-xl p-3" style={{ background: '#F8F9FC' }}>
-                        <div
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                          style={{ background: n.bg }}
-                        >
-                          <Icon size={14} style={{ color: n.color }} />
-                        </div>
-                        <div>
-                          <div className="text-[13px] font-semibold" style={{ color: '#161B23' }}>
-                            {n.title}
-                          </div>
-                          <div className="mt-0.5 text-[11.5px]" style={{ color: '#8B93A7' }}>
-                            {n.sub}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
           </div>
         </div>
       )}

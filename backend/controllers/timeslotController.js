@@ -1,6 +1,7 @@
 const Timeslot = require('../models/Timeslot');
 const Board = require('../models/Board');
 const City = require('../models/City');
+const Reservation = require('../models/Reservation');
 
 // Helper: checks whether a citymanager owns the city that a board belongs to
 const managerOwnsBoard = async (userId, boardId) => {
@@ -25,7 +26,7 @@ const hasOverlap = async (boardId, startTime, endTime, excludeTimeslotId = null)
   return !!conflict;
 };
 
-// @route  POST /api/timeslots   (superadmin: any board | citymanager: own city's boards)
+// @route  POST /api/timeslots   (superadmin, or citymanager: own city's boards)
 exports.createTimeslot = async (req, res) => {
   try {
     const { board, startTime, endTime } = req.body;
@@ -70,8 +71,38 @@ exports.getTimeslots = async (req, res) => {
     if (req.query.board) filter.board = req.query.board;
     if (req.query.status) filter.status = req.query.status;
 
+    if (req.user.role === 'citymanager') {
+      if (req.query.board) {
+        const owns = await managerOwnsBoard(req.user.id, req.query.board);
+        if (!owns) return res.status(403).json({ message: 'Access denied' });
+      } else {
+        const city = await City.findOne({ cityManager: req.user.id });
+        if (!city) return res.json([]);
+        filter.board = { $in: await Board.find({ city: city._id }).distinct('_id') };
+      }
+    }
+
     const timeslots = await Timeslot.find(filter).populate('board', 'name location city');
-    res.json(timeslots);
+
+    if (!['superadmin', 'citymanager'].includes(req.user.role)) {
+      return res.json(timeslots);
+    }
+
+    const reservations = await Reservation.find({
+      timeslot: { $in: timeslots.map((timeslot) => timeslot._id) },
+      status: { $in: ['pending', 'approved'] },
+    })
+      .populate('advertiser', 'name email')
+      .select('timeslot advertiser adCreativeUrl status')
+      .sort({ createdAt: -1 });
+    const reservationByTimeslot = new Map(
+      reservations.map((reservation) => [reservation.timeslot.toString(), reservation])
+    );
+
+    res.json(timeslots.map((timeslot) => ({
+      ...timeslot.toObject(),
+      reservation: reservationByTimeslot.get(timeslot._id.toString()) || null,
+    })));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -99,14 +130,24 @@ exports.updateTimeslot = async (req, res) => {
       if (!owns) return res.status(403).json({ message: 'Access denied' });
     }
 
-    if (timeslot.status === 'booked') {
-      return res.status(400).json({ message: 'Cannot edit a timeslot that is already booked' });
+    const { startTime, endTime, status } = req.body;
+    const cancelBooking = status === 'unavailable' && timeslot.status === 'booked';
+    if (status !== undefined) {
+      if (timeslot.status === 'booked' && status !== 'unavailable') {
+        return res.status(400).json({ message: 'A booked timeslot can only be marked unavailable' });
+      }
+      if (!['available', 'unavailable'].includes(status)) {
+        return res.status(400).json({ message: 'Status must be available or unavailable' });
+      }
+      timeslot.status = status;
     }
 
-    const { startTime, endTime } = req.body;
     const start = startTime ? new Date(startTime) : timeslot.startTime;
     const end = endTime ? new Date(endTime) : timeslot.endTime;
 
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return res.status(400).json({ message: 'Valid startTime and endTime are required' });
+    }
     if (start >= end) {
       return res.status(400).json({ message: 'endTime must be after startTime' });
     }
@@ -119,6 +160,20 @@ exports.updateTimeslot = async (req, res) => {
     timeslot.startTime = start;
     timeslot.endTime = end;
     await timeslot.save();
+
+    if (cancelBooking) {
+      try {
+        await Reservation.updateMany(
+          { timeslot: timeslot._id, status: { $in: ['pending', 'approved'] } },
+          { status: 'rejected' }
+        );
+      } catch (err) {
+        timeslot.status = 'booked';
+        await timeslot.save();
+        throw err;
+      }
+    }
+
     res.json(timeslot);
   } catch (err) {
     res.status(500).json({ message: err.message });

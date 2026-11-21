@@ -38,6 +38,35 @@ function compareValues(a, b) {
   return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
 }
 
+function getLatestTimestamp(row) {
+  if (!row || typeof row !== 'object') return null;
+
+  const candidates = [
+    row.updatedAt,
+    row.createdAt,
+    row.startTime,
+    row.endTime,
+    row.date,
+    row.timestamp,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate) {
+      const timestamp = candidate instanceof Date ? candidate.getTime() : Date.parse(candidate);
+      if (Number.isFinite(timestamp)) return timestamp;
+    }
+  }
+
+  for (const value of Object.values(row)) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const nestedTimestamp = getLatestTimestamp(value);
+      if (nestedTimestamp != null) return nestedTimestamp;
+    }
+  }
+
+  return null;
+}
+
 export default function Table({
   columns,
   rows,
@@ -65,7 +94,18 @@ export default function Table({
   }, [columns, data, query]);
 
   const sortedRows = useMemo(() => {
-    if (!sort.key) return filteredRows;
+    if (!sort.key) {
+      const rowsWithTimestamps = filteredRows.some((row) => getLatestTimestamp(row) != null);
+      if (!rowsWithTimestamps) return filteredRows;
+      return [...filteredRows].sort((a, b) => {
+        const timestampA = getLatestTimestamp(a);
+        const timestampB = getLatestTimestamp(b);
+        if (timestampA == null && timestampB == null) return 0;
+        if (timestampA == null) return 1;
+        if (timestampB == null) return -1;
+        return timestampB - timestampA;
+      });
+    }
     const column = columns.find((item) => item.key === sort.key);
     if (!column) return filteredRows;
 

@@ -4,9 +4,11 @@ import PageHeader from '../../components/ui/PageHeader';
 import Table from '../../components/ui/Table';
 import Alert from '../../components/ui/Alert';
 import Loading from '../../components/ui/Loading';
+import AdvertiserDetailsModal from '../../components/ui/AdvertiserDetailsModal';
 
 export default function AdvertiserAccounts() {
   const [reservations, setReservations] = useState([]);
+  const [selectedAdvertiser, setSelectedAdvertiser] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -30,17 +32,33 @@ export default function AdvertiserAccounts() {
         bookings: 0,
         approved: 0,
         pending: 0,
+        rejected: 0,
+        reservations: [],
       };
       entry.bookings += 1;
       if (r.status === 'approved') entry.approved += 1;
       if (r.status === 'pending') entry.pending += 1;
+      if (r.status === 'rejected') entry.rejected += 1;
+      entry.reservations.push(r);
       map.set(adv._id, entry);
     }
     return [...map.values()].sort((a, b) => b.bookings - a.bookings);
   }, [reservations]);
 
   const columns = [
-    { key: 'name', label: 'Advertiser' },
+    {
+      key: 'name',
+      label: 'Advertiser',
+      render: (row) => (
+        <button
+          type="button"
+          onClick={() => setSelectedAdvertiser(row)}
+          className="text-left font-medium text-signal hover:underline"
+        >
+          {row.name}
+        </button>
+      ),
+    },
     { key: 'email', label: 'Email' },
     { key: 'bookings', label: 'Bookings', render: (r) => r.bookings },
     { key: 'approved', label: 'Approved', render: (r) => r.approved },
@@ -60,6 +78,14 @@ export default function AdvertiserAccounts() {
         <Loading label="Loading advertisers..." />
       ) : (
         <Table columns={columns} rows={advertisers} emptyMessage="No advertisers have booked boards in your city yet." />
+      )}
+
+      {selectedAdvertiser && (
+        <AdvertiserDetailsModal
+          advertiser={selectedAdvertiser}
+          reservations={selectedAdvertiser.reservations}
+          onClose={() => setSelectedAdvertiser(null)}
+        />
       )}
     </div>
   );
