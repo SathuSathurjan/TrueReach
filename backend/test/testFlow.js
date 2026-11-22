@@ -40,6 +40,8 @@ const rand = () => Math.floor(Math.random() * 1000000);
   const managerEmail = `manager${suffix}@truereach.test`;
   const advertiserEmail = `advertiser${suffix}@truereach.test`;
   const advertiser2Email = `advertiser2_${suffix}@truereach.test`;
+  const missingPhoneManagerEmail = `manager_missing_phone${suffix}@truereach.test`;
+  const missingCompanyAdvertiserEmail = `advertiser_missing_company${suffix}@truereach.test`;
 
   // 1. Log in as the seeded superadmin; public registration cannot create admins.
   const adminLogin = await req('POST', '/auth/login', { email: 'admin@truereach.lk', password: 'Demo@123' });
@@ -50,7 +52,20 @@ const rand = () => Math.floor(Math.random() * 1000000);
   check('Public superadmin registration rejected', r1.status === 400);
 
   // 2. City manager registration requires admin approval.
-  const r2 = await req('POST', '/auth/register', { name: 'City Manager', email: managerEmail, password: '123456', role: 'citymanager' });
+  const missingPhoneManager = await req('POST', '/auth/register', {
+    name: 'Manager Without Phone',
+    email: missingPhoneManagerEmail,
+    password: '123456',
+    role: 'citymanager',
+  });
+  check('City manager registration requires a mobile number', missingPhoneManager.status === 400);
+  const r2 = await req('POST', '/auth/register', {
+    name: 'City Manager',
+    email: managerEmail,
+    password: '123456',
+    role: 'citymanager',
+    phone: '+94770000001',
+  });
   check('City manager registration is pending', r2.status === 201 && r2.data?.status === 'pending');
   const pendingLogin = await req('POST', '/auth/login', { email: managerEmail, password: '123456' });
   check('Pending city manager cannot log in', pendingLogin.status === 403);
@@ -62,18 +77,94 @@ const rand = () => Math.floor(Math.random() * 1000000);
   check('Approved city manager can log in', managerLogin.status === 200);
   const managerToken = managerLogin.data?.token;
   const managerId = managerLogin.data?._id;
+  const managerProfile = await req('GET', '/profile', null, managerToken);
+  check(
+    'City manager can read their profile details',
+    managerProfile.status === 200 && managerProfile.data?.phone === '+94770000001'
+  );
+  const updateManagerProfile = await req('PUT', '/profile', {
+    name: 'Updated City Manager',
+    phone: '+94770000002',
+  }, managerToken);
+  check(
+    'City manager can update name and phone',
+    updateManagerProfile.status === 200 &&
+      updateManagerProfile.data?.name === 'Updated City Manager' &&
+      updateManagerProfile.data?.phone === '+94770000002'
+  );
+  const changeManagerEmail = await req('PUT', '/profile', {
+    name: 'Updated City Manager',
+    email: `changed${suffix}@truereach.test`,
+    phone: '+94770000002',
+  }, managerToken);
+  check('Profile cannot change the account email', changeManagerEmail.status === 400);
 
   // 3. Advertisers are active immediately.
-  const r3 = await req('POST', '/auth/register', { name: 'Advertiser One', email: advertiserEmail, password: '123456', role: 'advertiser' });
+  const missingCompanyAdvertiser = await req('POST', '/auth/register', {
+    name: 'Advertiser Without Company Details',
+    email: missingCompanyAdvertiserEmail,
+    password: '123456',
+    role: 'advertiser',
+    phone: '+94770000003',
+  });
+  check('Advertiser registration requires company details', missingCompanyAdvertiser.status === 400);
+  const r3 = await req('POST', '/auth/register', {
+    name: 'Advertiser One',
+    email: advertiserEmail,
+    password: '123456',
+    role: 'advertiser',
+    phone: '+94770000003',
+    companyName: 'Advertiser One Ltd',
+    companyEmail: `company${suffix}@truereach.test`,
+    companyPhone: '+94112223344',
+  });
   check('Register advertiser immediately', r3.status === 201 && Boolean(r3.data?.token), JSON.stringify(r3.data));
   const advertiserToken = r3.data?.token;
   const advertiserId = r3.data?._id;
+  const advertiserProfile = await req('GET', '/profile', null, advertiserToken);
+  check(
+    'Advertiser profile includes company contacts',
+    advertiserProfile.status === 200 &&
+      advertiserProfile.data?.companyName === 'Advertiser One Ltd' &&
+      advertiserProfile.data?.companyPhone === '+94112223344'
+  );
+  const updateAdvertiserProfile = await req('PUT', '/profile', {
+    name: 'Updated Advertiser One',
+    phone: '+94770000005',
+    companyName: 'Advertiser One Group',
+    companyEmail: `company${suffix}@truereach.test`,
+    companyPhone: '+94119998877',
+  }, advertiserToken);
+  check(
+    'Advertiser can update personal and company contact details',
+    updateAdvertiserProfile.status === 200 &&
+      updateAdvertiserProfile.data?.companyName === 'Advertiser One Group' &&
+      updateAdvertiserProfile.data?.companyPhone === '+94119998877'
+  );
 
-  const r4 = await req('POST', '/auth/register', { name: 'Advertiser Two', email: advertiser2Email, password: '123456', role: 'advertiser' });
+  const r4 = await req('POST', '/auth/register', {
+    name: 'Advertiser Two',
+    email: advertiser2Email,
+    password: '123456',
+    role: 'advertiser',
+    phone: '+94770000004',
+    companyName: 'Advertiser Two Ltd',
+    companyEmail: `company2_${suffix}@truereach.test`,
+    companyPhone: '+94115556677',
+  });
   const advertiser2Token = r4.data?.token;
 
   // 4. Duplicate registration should fail.
-  const rDup = await req('POST', '/auth/register', { name: 'Dup', email: advertiserEmail, password: '123456', role: 'advertiser' });
+  const rDup = await req('POST', '/auth/register', {
+    name: 'Dup',
+    email: advertiserEmail,
+    password: '123456',
+    role: 'advertiser',
+    phone: '+94770000003',
+    companyName: 'Advertiser One Ltd',
+    companyEmail: `company${suffix}@truereach.test`,
+    companyPhone: '+94112223344',
+  });
   check('Duplicate email registration rejected', rDup.status === 400);
 
   // 5. Superadmin creates a city.
@@ -143,6 +234,14 @@ const rand = () => Math.floor(Math.random() * 1000000);
   const bookRes = await req('POST', '/reservations', { timeslot: timeslotId, adCreativeUrl: 'https://example.com/ad.mp4' }, advertiserToken);
   check('Advertiser books timeslot', bookRes.status === 201, JSON.stringify(bookRes.data));
   const reservationId = bookRes.data?._id;
+  const managerReservations = await req('GET', '/reservations', null, managerToken);
+  const managerReservation = managerReservations.data?.find((reservation) => reservation._id === reservationId);
+  check(
+    'City manager reservation data includes advertiser contact details',
+    managerReservation?.advertiser?.phone === '+94770000005' &&
+      managerReservation?.advertiser?.companyEmail === `company${suffix}@truereach.test` &&
+      managerReservation?.advertiser?.companyPhone === '+94119998877'
+  );
   const bookedSlots = await req('GET', `/timeslots?board=${boardId}`, null, superToken);
   const bookedSlot = bookedSlots.data?.find((slot) => slot._id === timeslotId);
   check(
@@ -238,6 +337,22 @@ const rand = () => Math.floor(Math.random() * 1000000);
   check('Reactivated manager can be assigned again', reassignCity.status === 200 && reassignCity.data?.cityManager === managerId);
   const reassignedBoard = await req('GET', `/boards/${unassignedBoardId}`, null, superToken);
   check('Reassigning a city manager reactivates the city boards', reassignedBoard.status === 200 && reassignedBoard.data?.status === 'active');
+
+  const changePassword = await req('PUT', '/profile/password', {
+    currentPassword: '123456',
+    newPassword: 'NewPass123!',
+  }, managerToken);
+  check('City manager can change their password', changePassword.status === 200);
+  const oldPasswordLogin = await req('POST', '/auth/login', {
+    email: managerEmail,
+    password: '123456',
+  });
+  check('Old password stops working after password change', oldPasswordLogin.status === 401);
+  const newPasswordLogin = await req('POST', '/auth/login', {
+    email: managerEmail,
+    password: 'NewPass123!',
+  });
+  check('New password works after password change', newPasswordLogin.status === 200);
 
   const deactivateAdvertiser = await req('PUT', `/users/${advertiserId}/status`, { isActive: false }, superToken);
   check('Advertiser can be deactivated', deactivateAdvertiser.status === 200 && deactivateAdvertiser.data?.isActive === false);

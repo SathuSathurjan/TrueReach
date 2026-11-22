@@ -6,7 +6,16 @@ import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
 
 export default function Register() {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'advertiser' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'advertiser',
+    phone: '',
+    companyName: '',
+    companyEmail: '',
+    companyPhone: '',
+  });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [pendingApproval, setPendingApproval] = useState(false);
@@ -39,7 +48,7 @@ export default function Register() {
       style={{ background: '#EFF2F8', fontFamily: "'Inter', system-ui, sans-serif" }}
     >
       <div
-        className="w-full max-w-sm rounded-2xl bg-white p-8"
+        className="w-full max-w-lg rounded-2xl bg-white p-8"
         style={{ border: '1px solid #E7EAF3', boxShadow: '0 24px 50px -24px rgba(15,23,42,0.25)' }}
       >
         <div className="mb-7 flex items-center gap-2.5">
@@ -76,8 +85,16 @@ export default function Register() {
                 { value: 'citymanager', label: 'City Manager' },
               ]}
             />
-            <Input label="Name" name="name" value={form.name} onChange={handleChange} required />
+            <Input label="Full name" name="name" value={form.name} onChange={handleChange} required />
             <Input label="Email" type="email" name="email" value={form.email} onChange={handleChange} required />
+            <Input label="Mobile number" type="tel" name="phone" value={form.phone} onChange={handleChange} required />
+            {form.role === 'advertiser' && (
+              <>
+                <Input label="Company name" name="companyName" value={form.companyName} onChange={handleChange} required />
+                <Input label="Company email" type="email" name="companyEmail" value={form.companyEmail} onChange={handleChange} required />
+                <Input label="Company phone" type="tel" name="companyPhone" value={form.companyPhone} onChange={handleChange} required />
+              </>
+            )}
             <Input label="Password" type="password" name="password" value={form.password} onChange={handleChange} required />
             {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="submit" disabled={submitting} className="w-full">

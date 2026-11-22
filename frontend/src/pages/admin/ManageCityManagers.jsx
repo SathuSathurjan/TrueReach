@@ -11,7 +11,7 @@ import Loading from '../../components/ui/Loading';
 
 export default function ManageCityManagers() {
   const [managers, setManagers] = useState([]);
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [updatingManagerId, setUpdatingManagerId] = useState(null);
@@ -38,7 +38,7 @@ export default function ManageCityManagers() {
     setError('');
     try {
       await api.post('/users', { ...form, role: 'citymanager' });
-      setForm({ name: '', email: '', password: '' });
+      setForm({ name: '', email: '', phone: '', password: '' });
       loadManagers();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create city manager');
@@ -155,6 +155,16 @@ export default function ManageCityManagers() {
               name="email"
               placeholder="name@example.com"
               value={form.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="flex-1">
+            <Input
+              label="Mobile number"
+              type="tel"
+              name="phone"
+              value={form.phone}
               onChange={handleChange}
               required
             />

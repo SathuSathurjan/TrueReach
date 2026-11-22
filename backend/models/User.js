@@ -14,6 +14,27 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
   },
+  phone: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  companyName: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  companyEmail: {
+    type: String,
+    lowercase: true,
+    trim: true,
+    default: '',
+  },
+  companyPhone: {
+    type: String,
+    trim: true,
+    default: '',
+  },
   password: {
     type: String,
     required: true,

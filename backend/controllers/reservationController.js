@@ -83,13 +83,13 @@ exports.getReservations = async (req, res) => {
       reservations = await Reservation.find({ board: { $in: boardIds } })
         .populate(boardPopulate)
         .populate('timeslot', 'startTime endTime')
-        .populate('advertiser', 'name email');
+        .populate('advertiser', 'name email phone companyName companyEmail companyPhone');
     } else {
       // superadmin
       reservations = await Reservation.find()
         .populate(boardPopulate)
         .populate('timeslot', 'startTime endTime')
-        .populate('advertiser', 'name email');
+        .populate('advertiser', 'name email phone companyName companyEmail companyPhone');
     }
 
     res.json(reservations);

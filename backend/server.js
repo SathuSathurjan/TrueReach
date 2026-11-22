@@ -13,12 +13,14 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes (we'll add more as we build them)
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/profile', require('./routes/profileRoutes'));
 app.use('/api/cities', require('./routes/cityRoutes'));
 app.use('/api/boards', require('./routes/boardRoutes'));
 app.use('/api/timeslots', require('./routes/timeslotRoutes'));
 app.use('/api/reservations', require('./routes/reservationRoutes'));
 app.use('/api/impressions', require('./routes/impressionRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
+app.use("/api/public", require("./routes/publicRoutes"));
 
 // Test route
 app.get('/', (req, res) => {

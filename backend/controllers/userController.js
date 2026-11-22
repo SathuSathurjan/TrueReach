@@ -1,20 +1,65 @@
 const User = require('../models/User');
 const City = require('../models/City');
 const Board = require('../models/Board');
+const { isValidEmail, isValidPhone } = require('../utils/userValidation');
 
 // @route  POST /api/users   (superadmin only — creates a user of any role)
 exports.createUser = async (req, res) => {
   try {
-    const { name, email, password, role, city } = req.body;
+    const {
+      name, email, password, role, city, phone,
+      companyName, companyEmail, companyPhone,
+    } = req.body;
 
-    if (!name || !email || !password || !role) {
+    if (
+      typeof name !== 'string' || !name.trim() ||
+      typeof email !== 'string' || !email.trim() ||
+      typeof password !== 'string' || !password ||
+      typeof role !== 'string'
+    ) {
       return res.status(400).json({ message: 'name, email, password and role are required' });
     }
 
-    const exists = await User.findOne({ email });
+    const normalizedName = name.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPhone = typeof phone === 'string' ? phone.trim() : '';
+    if (!isValidPhone(normalizedPhone)) {
+      return res.status(400).json({ message: 'A valid mobile number is required' });
+    }
+
+    let advertiserDetails = {};
+    if (role === 'advertiser') {
+      const normalizedCompanyName = typeof companyName === 'string' ? companyName.trim() : '';
+      const normalizedCompanyEmail = typeof companyEmail === 'string' ? companyEmail.trim().toLowerCase() : '';
+      const normalizedCompanyPhone = typeof companyPhone === 'string' ? companyPhone.trim() : '';
+      if (!normalizedCompanyName) {
+        return res.status(400).json({ message: 'Company name is required' });
+      }
+      if (!isValidEmail(normalizedCompanyEmail)) {
+        return res.status(400).json({ message: 'A valid company email is required' });
+      }
+      if (!isValidPhone(normalizedCompanyPhone)) {
+        return res.status(400).json({ message: 'A valid company phone number is required' });
+      }
+      advertiserDetails = {
+        companyName: normalizedCompanyName,
+        companyEmail: normalizedCompanyEmail,
+        companyPhone: normalizedCompanyPhone,
+      };
+    }
+
+    const exists = await User.findOne({ email: normalizedEmail });
     if (exists) return res.status(400).json({ message: 'User already exists' });
 
-    const user = await User.create({ name, email, password, role, city: city || null });
+    const user = await User.create({
+      name: normalizedName,
+      email: normalizedEmail,
+      password,
+      role,
+      city: city || null,
+      phone: normalizedPhone,
+      ...advertiserDetails,
+    });
 
     res.status(201).json({
       _id: user._id,
@@ -22,6 +67,10 @@ exports.createUser = async (req, res) => {
       email: user.email,
       role: user.role,
       city: user.city,
+      phone: user.phone,
+      companyName: user.companyName,
+      companyEmail: user.companyEmail,
+      companyPhone: user.companyPhone,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

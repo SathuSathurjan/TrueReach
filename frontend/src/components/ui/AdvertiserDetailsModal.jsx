@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Mail, X } from 'lucide-react';
+import { Mail, Phone, X } from 'lucide-react';
 import Badge from './Badge';
 
 export default function AdvertiserDetailsModal({ advertiser, reservations, onClose }) {
@@ -51,17 +51,43 @@ export default function AdvertiserDetailsModal({ advertiser, reservations, onClo
         <div className="flex flex-col gap-6 p-5">
           <section>
             <h3 className="mb-2 text-sm font-semibold text-ink">Contact details</h3>
-            {advertiser.email ? (
-              <a
-                href={`mailto:${advertiser.email}`}
-                className="inline-flex items-center gap-2 text-sm text-signal hover:underline"
-              >
-                <Mail size={15} />
-                {advertiser.email}
-              </a>
-            ) : (
-              <p className="text-sm text-secondary">No email address available.</p>
-            )}
+            <div className="flex flex-col gap-2 text-sm">
+              <p className="text-secondary">Personal email: {advertiser.email || 'Not provided'}</p>
+              {advertiser.email && (
+                <a
+                  href={`mailto:${advertiser.email}`}
+                  className="inline-flex items-center gap-2 text-signal hover:underline"
+                >
+                  <Mail size={15} />
+                  Email advertiser
+                </a>
+              )}
+              <p className="inline-flex items-center gap-2 text-secondary">
+                <Phone size={15} />
+                Personal mobile:
+                {advertiser.phone
+                  ? <a href={`tel:${advertiser.phone}`} className="text-signal hover:underline">{advertiser.phone}</a>
+                  : 'Not provided'}
+              </p>
+              <p className="text-secondary">Company: {advertiser.companyName || 'Not provided'}</p>
+              <p className="text-secondary">Company email: {advertiser.companyEmail || 'Not provided'}</p>
+              {advertiser.companyEmail && (
+                <a
+                  href={`mailto:${advertiser.companyEmail}`}
+                  className="inline-flex items-center gap-2 text-signal hover:underline"
+                >
+                  <Mail size={15} />
+                  Email company
+                </a>
+              )}
+              <p className="inline-flex items-center gap-2 text-secondary">
+                <Phone size={15} />
+                Company phone:
+                {advertiser.companyPhone
+                  ? <a href={`tel:${advertiser.companyPhone}`} className="text-signal hover:underline">{advertiser.companyPhone}</a>
+                  : 'Not provided'}
+              </p>
+            </div>
           </section>
 
           <section>
